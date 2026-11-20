@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>學習星球闖關</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* 版面概念：左邊是一顆可以拖曳旋轉的海洋星球，右邊是六座章節群島的航海清單；進入島嶼後切換成闖關卡片。 */
+:root{
+  --bg:#E9F1EF; --surface:#FFFFFF; --sky:#D3E5E2; --ink:#13302B; --muted:#56706A; --line:#C8DAD6;
+  --ocean:#2D7C9C; --ocean-deep:#174E69; --land:#88B961; --land-edge:#5C9140;
+  --gold:#DE9A12; --ok:#2B8552; --bad:#B9473B; --ok-bg:#E1F2E7; --bad-bg:#F8E3DF;
+  --i1:#D97A26; --i2:#3A8C5B; --i3:#B8921A; --i4:#C2463B; --i5:#6A58B2; --i6:#24899A;
+  --font-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1B1D; --surface:#162A2D; --sky:#0A1517; --ink:#E2EEEB; --muted:#93ABA6; --line:#2A4240;
+  --ocean:#2A6D88; --ocean-deep:#0F3A4E; --land:#6F9F4D; --land-edge:#4B7733;
+  --gold:#F2B640; --ok:#5DC08B; --bad:#EF8070; --ok-bg:#17372A; --bad-bg:#3D221E;
+  --i1:#F0964A; --i2:#5DB880; --i3:#DDB740; --i4:#EC6B5E; --i5:#9C8CEB; --i6:#4CC0D0;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1B1D; --surface:#162A2D; --sky:#0A1517; --ink:#E2EEEB; --muted:#93ABA6; --line:#2A4240;
+  --ocean:#2A6D88; --ocean-deep:#0F3A4E; --land:#6F9F4D; --land-edge:#4B7733;
+  --gold:#F2B640; --ok:#5DC08B; --bad:#EF8070; --ok-bg:#17372A; --bad-bg:#3D221E;
+  --i1:#F0964A; --i2:#5DB880; --i3:#DDB740; --i4:#EC6B5E; --i5:#9C8CEB; --i6:#4CC0D0;
+  color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.65}
+.wrap{max-width:1100px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--font-display);font-weight:400;margin:0;text-wrap:balance;line-height:1.25}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* 頁首 */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:20px}
+.top h1{font-size:clamp(2rem,6vw,3rem);letter-spacing:.04em}
+.top .sub{color:var(--muted);margin:4px 0 0}
+.tally{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:6px 16px 6px 10px;font-variant-numeric:tabular-nums}
+.tally .star{color:var(--gold);font-size:1.4rem;line-height:1}
+.tally b{font-family:var(--font-display);font-weight:400;font-size:1.35rem}
+.tally small{color:var(--muted)}
+
+/* 首頁：星球 + 島嶼清單 */
+.home{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.home{grid-template-columns:minmax(0,1fr)}}
+.planet-panel{background:var(--sky);border-radius:22px;padding:14px;position:relative}
+.planet-hint{display:flex;justify-content:center;gap:8px;color:var(--muted);font-size:.85rem;margin:0 0 6px}
+.planet-box{width:100%;max-width:520px;aspect-ratio:1;margin:0 auto;touch-action:none;cursor:grab}
+.planet-box.dragging{cursor:grabbing}
+.planet-box canvas{width:100%;height:100%;display:block}
+
+.islands{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.island-btn{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 14px;align-items:center;
+  text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;
+  transition:transform .15s ease,border-color .15s ease}
+.island-btn:hover{transform:translateX(3px);border-color:var(--c)}
+.island-btn .dot{width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
+.island-btn .name{font-family:var(--font-display);font-size:1.2rem}
+.island-btn .topic{grid-column:2;color:var(--muted);font-size:.85rem;margin-top:-2px}
+.island-btn .meta{grid-row:1/3;grid-column:3;text-align:right;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.island-btn .meta .st{color:var(--gold);display:block;font-size:1rem;letter-spacing:1px}
+.bar{grid-column:2/4;height:6px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--c);border-radius:6px;transition:width .4s ease}
+.island-btn:disabled{opacity:.55;cursor:not-allowed}
+.island-btn:disabled:hover{transform:none;border-color:var(--line)}
+.island-btn .lock{color:var(--muted);display:block;font-size:1rem}
+.teacher-note{display:inline-block;margin:8px 0 0;font-size:.85rem;color:var(--ink);background:var(--sky);border-radius:999px;padding:2px 12px}
+
+/* 島嶼頁 */
+.back{background:none;border:0;color:var(--muted);padding:6px 0;margin-bottom:8px}
+.back:hover{color:var(--ink)}
+.island-head{border-left:6px solid var(--c);padding:4px 0 4px 16px;margin-bottom:20px}
+.island-head h2{font-size:clamp(1.6rem,4.5vw,2.2rem)}
+.island-head p{margin:2px 0 0;color:var(--muted)}
+.stages{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:10px}
+.stage .no{font-size:.8rem;letter-spacing:.12em;color:var(--c);font-weight:700}
+.stage h3{font-size:1.3rem}
+.stage .stars{font-size:1.5rem;letter-spacing:4px;color:var(--line)}
+.stage .stars .on{color:var(--gold)}
+.stage p{margin:0;color:var(--muted);font-size:.9rem}
+.go{align-self:flex-start;background:var(--c);color:#fff;border:0;border-radius:999px;padding:8px 20px;font-weight:500}
+.go:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+
+/* 闖關卡 */
+.quiz{max-width:680px;margin:0 auto}
+.quiz-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.quiz-top .where{color:var(--muted);font-size:.9rem}
+.pips{display:flex;gap:6px}
+.pips i{width:26px;height:8px;border-radius:4px;background:var(--line)}
+.pips i.ok{background:var(--ok)} .pips i.no{background:var(--bad)} .pips i.now{background:var(--c)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,4vw,30px)}
+.qtext{font-size:1.2rem;font-weight:500;margin:0 0 18px}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;background:var(--bg);border:2px solid transparent;border-radius:12px;padding:12px 14px}
+.opt:hover:not(:disabled){border-color:var(--c)}
+.opt .k{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);font-size:.85rem;font-weight:700}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--ok-bg);border-color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.feedback{margin-top:16px;border-radius:12px;padding:12px 16px;background:var(--bg)}
+.feedback b{display:block;font-family:var(--font-display);font-weight:400;font-size:1.15rem}
+.feedback.good b{color:var(--ok)} .feedback.bad b{color:var(--bad)}
+.next{margin-top:16px;display:flex;justify-content:flex-end}
+.btn{background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:10px 22px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.result{text-align:center}
+.result .big{font-size:3rem;letter-spacing:8px;color:var(--line);line-height:1.2}
+.result .big .on{color:var(--gold)}
+.result h2{font-size:1.8rem;margin:8px 0 4px}
+.result p{color:var(--muted);margin:0 0 18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+/* 進度碼與說明 */
+.lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:36px}
+@media (max-width:820px){.lower{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.box h3{font-size:1.2rem;margin-bottom:6px}
+.box p{margin:0 0 10px;color:var(--muted);font-size:.92rem}
+textarea{width:100%;box-sizing:border-box;min-height:64px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;
+  background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;resize:vertical;word-break:break-all}
+.box .row{justify-content:flex-start;margin-top:8px}
+.msg{font-size:.9rem;margin-top:6px;min-height:1.4em}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.privacy{border-left:4px solid var(--ok)}
+.privacy ul{margin:0;padding-left:1.2em;color:var(--muted);font-size:.92rem}
+details{margin-top:18px}
+details summary{cursor:pointer;color:var(--muted)}
+details .box{margin-top:10px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;background:var(--bg);padding:1px 5px;border-radius:5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>學習星球闖關</h1>
+      <p class="sub">自然．七年級生物｜六座群島，每座兩關，答對拿星星</p>
+      <p class="teacher-note" id="teacherNote" hidden>老師預覽模式：所有島嶼暫時開放（網址結尾有 #teacher 才會出現）</p>
+    </div>
+    <div class="tally" aria-live="polite"><span class="star">★</span><b id="totalStars">0</b><small>/ <span id="maxStars">36</span> 顆星</small></div>
+  </header>
+
+  <!-- 首頁 -->
+  <section id="viewHome">
+    <div class="home">
+      <div class="planet-panel">
+        <p class="planet-hint">拖曳星球旋轉．點選島嶼出發</p>
+        <div class="planet-box" id="planetBox"><canvas id="planet" aria-label="可旋轉的學習星球，點選島嶼進入關卡" role="img"></canvas></div>
+      </div>
+      <ul class="islands" id="islandList"></ul>
+    </div>
+
+    <div class="lower">
+      <div class="box">
+        <h3>我的進度碼</h3>
+        <p>進度只存在這台裝置的瀏覽器裡。換電腦前，先產生進度碼抄下或複製；到新電腦貼上即可接續。</p>
+        <div class="row"><button class="btn" id="makeCode">產生進度碼</button></div>
+        <textarea id="exportCode" readonly hidden aria-label="我的進度碼"></textarea>
+        <div class="row" id="copyRow" hidden><button class="btn ghost" id="copyCode">複製</button></div>
+        <p style="margin-top:14px">在新裝置貼上進度碼：</p>
+        <textarea id="importCode" placeholder="貼上以 LP1- 開頭的進度碼" aria-label="貼上進度碼"></textarea>
+        <div class="row"><button class="btn ghost" id="doImport">匯入進度</button><button class="btn ghost" id="resetBtn">清除本機進度</button></div>
+        <div class="msg" id="codeMsg" aria-live="polite"></div>
+      </div>
+      <div class="box privacy">
+        <h3>個人資料說明</h3>
+        <ul>
+          <li>本網站不需要登入，也不詢問姓名、學號或班級。</li>
+          <li>答題紀錄只保存在學生自己的瀏覽器中，不會上傳到任何伺服器。</li>
+          <li>進度碼只記錄每一關得到幾顆星，不含任何身分資訊。</li>
+          <li>清除瀏覽器資料或按「清除本機進度」後，紀錄即消失。</li>
+        </ul>
+      </div>
+    </div>
+
+    <details>
+      <summary>給老師：如何修改或新增題目</summary>
+      <div class="box">
+        <p>題庫寫在本頁程式碼最前面的 <code>ISLANDS</code> 區塊。每一題的格式是：</p>
+        <p><code>{q:"題目", a:["正確答案","錯誤選項","錯誤選項","錯誤選項"], e:"解說"}</code></p>
+        <p>正確答案一律放在第一個，畫面上會自動打亂順序。每關目前 5 題，改成更多題也可以；星星計算依答對比例：全對 3 顆、八成 2 顆、六成 1 顆。</p>
+        <p><b>開放島嶼：</b>在程式碼最前面的 <code>OPEN_ISLANDS</code> 寫上要開放的島嶼代號，例如 <code>["i1","i2","i3"]</code>。代號依序是 i1 生命世界島、i2 細胞島、i3 營養島、i4 運輸島、i5 協調島、i6 恆定島。改好後重新上傳 index.html 即可，學生已有的星星不會消失。</p>
+        <p><b>老師預覽：</b>在網址最後加上 <code>#teacher</code>，可以看到並試玩所有島嶼，方便事先檢查題目。</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 島嶼頁 -->
+  <section id="viewIsland" hidden>
+    <button class="back" id="backHome">← 回到星球</button>
+    <div class="island-head" id="islandHead"></div>
+    <div class="stages" id="stageList"></div>
+  </section>
+
+  <!-- 闖關 -->
+  <section id="viewQuiz" hidden>
+    <div class="quiz">
+      <div class="quiz-top">
+        <button class="back" id="quitQuiz" style="margin:0">← 離開這一關</button>
+        <span class="where" id="quizWhere"></span>
+      </div>
+      <div class="pips" id="pips" style="margin-bottom:14px"></div>
+      <div class="card" id="quizCard"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   題庫：正確答案放在 a 陣列的第一個，畫面會自動打亂。
+   ============================================================ */
+/* ============================================================
+   開放設定：把要開放給學生的島嶼代號寫在下面。
+   i1 生命世界島　i2 細胞島　i3 營養島
+   i4 運輸島　　　i5 協調島　i6 恆定島
+   例：只開放前兩座 → ["i1","i2"]；全部開放 → ["i1","i2","i3","i4","i5","i6"]
+   ============================================================ */
+const OPEN_ISLANDS = ["i1","i2","i3"];
+
+const ISLANDS = [
+ {id:"i1", name:"生命世界島", topic:"生命現象．科學方法．顯微鏡", lat:22, lon:0, stages:[
+  {title:"生命的特徵", qs:[
+   {q:"下列何者「不是」所有生物共同具有的特徵？", a:["都能自行移動位置","需要養分與能量","能對環境刺激產生反應","能生長與繁殖"], e:"大多數植物無法移動位置，但它們仍然是生物。"},
+   {q:"含羞草的葉片被碰觸後會閉合，這屬於哪一種生命現象？", a:["感應","生殖","生長","代謝"], e:"生物對環境中的刺激產生反應，稱為感應。"},
+   {q:"生物體內所有化學反應的總稱是什麼？", a:["代謝","消化","呼吸","發育"], e:"代謝包含合成與分解等所有化學反應，消化和呼吸都只是其中一部分。"},
+   {q:"下列何者是生物？", a:["酵母菌","機器人","鐘乳石","燃燒中的火焰"], e:"酵母菌是單細胞的真菌，具有細胞，能代謝與繁殖。"},
+   {q:"「生物圈」的範圍包含哪些部分？", a:["大氣圈下層、水圈和岩石圈上層","只有陸地表面","只有海洋","整個大氣層到外太空"], e:"有生物生存的範圍稱為生物圈，橫跨大氣、水和岩石三個圈層。"}
+  ]},
+  {title:"科學方法與顯微鏡", qs:[
+   {q:"實驗中刻意改變、用來比較結果的那一個條件稱為什麼？", a:["操縱變因","控制變因","應變變因","實驗結論"], e:"操縱變因是刻意改變的條件；控制變因要保持相同；應變變因是隨之改變的結果。"},
+   {q:"科學方法的一般順序，下列何者最合適？", a:["觀察→提出問題→形成假說→設計實驗→得出結論","提出結論→設計實驗→觀察","形成假說→觀察→提出問題→結論","設計實驗→提出問題→觀察→假說"], e:"先觀察並提出問題，再提出可能的解釋（假說），最後用實驗驗證。"},
+   {q:"複式顯微鏡的目鏡是 10×，物鏡是 40×，放大倍率是多少？", a:["400 倍","50 倍","40 倍","4000 倍"], e:"放大倍率＝目鏡倍率 × 物鏡倍率＝10 × 40＝400。"},
+   {q:"由低倍物鏡換成高倍物鏡後，視野會有什麼變化？", a:["視野變暗，看到的範圍變小","視野變亮，範圍變大","視野變暗，範圍變大","沒有任何變化"], e:"倍率越高，看到的範圍越小，進入的光線也較少，所以視野較暗。"},
+   {q:"在複式顯微鏡下，影像位於視野的左上方。要把影像移到中央，玻片應往哪個方向移動？", a:["左上方","右下方","右上方","左下方"], e:"複式顯微鏡的影像上下左右顛倒，影像在哪邊，玻片就往那邊移。"}
+  ]}
+ ]},
+ {id:"i2", name:"細胞島", topic:"細胞構造．物質進出．組成層次", lat:-14, lon:60, stages:[
+  {title:"細胞的構造", qs:[
+   {q:"最早用自製顯微鏡觀察軟木塞，並把看到的小格子命名為「細胞」的科學家是誰？", a:["虎克","雷文霍克","達爾文","孟德爾"], e:"虎克觀察到的其實是死去植物細胞留下的細胞壁。"},
+   {q:"下列哪一種構造，植物細胞有，動物細胞沒有？", a:["細胞壁","細胞膜","細胞核","粒線體"], e:"植物細胞有細胞壁，大多也有葉綠體；動物細胞兩者都沒有。"},
+   {q:"控制物質進出細胞的構造是哪一個？", a:["細胞膜","細胞壁","細胞核","液胞"], e:"細胞膜具有選擇性，能控制物質的進出。"},
+   {q:"細胞中進行光合作用的胞器是哪一個？", a:["葉綠體","粒線體","細胞核","液胞"], e:"葉綠體含有葉綠素，能吸收光能製造養分。"},
+   {q:"細胞進行呼吸作用、釋放能量的主要場所是哪一個？", a:["粒線體","葉綠體","細胞壁","細胞核"], e:"粒線體分解養分、釋放能量，供細胞使用。"}
+  ]},
+  {title:"物質進出與組成層次", qs:[
+   {q:"物質由濃度高的地方往濃度低的地方移動，這個現象稱為什麼？", a:["擴散","滲透","蒸散","消化"], e:"擴散不需要消耗能量，會一直進行到兩邊濃度接近相等。"},
+   {q:"水分子透過細胞膜的擴散，有特別的名稱，是什麼？", a:["滲透","擴散","吸收","過濾"], e:"水分子通過細胞膜的擴散稱為滲透作用。"},
+   {q:"把紅血球放進清水中，紅血球會怎樣？", a:["吸水脹大，甚至破裂","失水皺縮","完全沒有變化","變成白血球"], e:"清水中水分子濃度較高，水會滲透進入紅血球；紅血球沒有細胞壁保護，所以可能破裂。"},
+   {q:"多細胞動物的組成層次，由小到大的正確順序是？", a:["細胞→組織→器官→器官系統→個體","組織→細胞→器官→個體","細胞→器官→組織→個體","器官→組織→細胞→個體"], e:"植物沒有器官系統這一層：細胞→組織→器官→個體。"},
+   {q:"下列何者屬於「器官」層次？", a:["一片葉子","血液","一個表皮細胞","消化系統"], e:"葉由多種組織組成，屬於器官；血液是組織，消化系統是器官系統。"}
+  ]}
+ ]},
+ {id:"i3", name:"營養島", topic:"養分．酵素．光合作用．消化", lat:30, lon:120, stages:[
+  {title:"養分與酵素", qs:[
+   {q:"下列哪一種養分可以提供生物能量？", a:["醣類","維生素","礦物質","水"], e:"醣類、蛋白質、脂質能提供能量；維生素、礦物質和水不能提供能量，但同樣重要。"},
+   {q:"碘液遇到哪一種物質，會由黃褐色變成藍黑色？", a:["澱粉","葡萄糖","蛋白質","脂質"], e:"碘液常用來檢驗澱粉是否存在。"},
+   {q:"酵素的主要成分是什麼？", a:["蛋白質","醣類","脂質","礦物質"], e:"酵素主要由蛋白質構成，所以容易受溫度與酸鹼影響。"},
+   {q:"人體內的酵素，大約在哪個溫度作用效果最好？", a:["約 37 ℃","約 0 ℃","約 60 ℃","約 100 ℃"], e:"人體酵素在接近體溫時效果最好，溫度過高會使酵素變性而失去作用。"},
+   {q:"酵素在反應前後，本身會怎樣？", a:["不會改變，可以重複使用","會被完全消耗掉","會變成產物","會變成另一種酵素"], e:"酵素只是加快反應，本身不會被消耗。"}
+  ]},
+  {title:"光合作用與消化", qs:[
+   {q:"植物進行光合作用的原料是什麼？", a:["二氧化碳和水","氧氣和水","葡萄糖和氧氣","氮氣和水"], e:"植物利用光能，把二氧化碳和水合成葡萄糖，並釋放氧氣。"},
+   {q:"光合作用的產物是什麼？", a:["葡萄糖（醣類）和氧氣","二氧化碳和水","蛋白質和氮氣","澱粉和二氧化碳"], e:"產生的葡萄糖可以再轉變成澱粉儲存。"},
+   {q:"人體消化食物、吸收養分的主要器官是哪一個？", a:["小腸","胃","大腸","食道"], e:"小腸很長，內壁有許多絨毛，增加吸收的表面積。"},
+   {q:"膽汁的功能是什麼？", a:["把脂質乳化成小油滴，幫助消化","直接分解蛋白質","分解澱粉","殺死細菌"], e:"膽汁不含酵素，但能讓脂質變成小油滴，方便脂質酵素作用。"},
+   {q:"唾液中的酵素，主要能分解哪一種養分？", a:["澱粉","蛋白質","脂質","維生素"], e:"所以飯在嘴裡嚼久了，會覺得有點甜。"}
+  ]}
+ ]},
+ {id:"i4", name:"運輸島", topic:"植物運輸．人體循環", lat:-26, lon:180, stages:[
+  {title:"植物的運輸", qs:[
+   {q:"植物體內運輸水分和礦物質的構造是什麼？", a:["木質部（導管）","韌皮部（篩管）","表皮","氣孔"], e:"水和礦物質由根部吸收，經木質部往上運送。"},
+   {q:"葉片製造的養分，經由哪一種構造運輸到植物各處？", a:["韌皮部（篩管）","木質部（導管）","根毛","保衛細胞"], e:"韌皮部負責運輸養分，可以向上，也可以向下。"},
+   {q:"植物體內的水分以水蒸氣形式由葉片氣孔散失，稱為什麼？", a:["蒸散作用","光合作用","呼吸作用","滲透作用"], e:"蒸散作用產生的拉力，是水分往上運輸的主要動力。"},
+   {q:"植物根部吸收水分的主要部位是哪裡？", a:["根毛","根冠","莖的表皮","葉脈"], e:"根毛增加了根與土壤接觸的表面積。"},
+   {q:"樹幹被環狀剝去樹皮後，切口上方逐漸膨大，主要原因是什麼？", a:["韌皮部被切斷，養分無法往下運送而累積","木質部被切斷，水分累積","切口上方長出新的根","蒸散作用增加"], e:"樹皮內側含有韌皮部；養分向下運送受阻，就堆積在切口上方。"}
+  ]},
+  {title:"人體的循環", qs:[
+   {q:"人類的心臟有幾個腔室？", a:["4 個","2 個","3 個","5 個"], e:"人類心臟有左右心房、左右心室，共四個腔室。"},
+   {q:"負責把血液送往全身的是心臟的哪一個腔室？", a:["左心室","右心室","左心房","右心房"], e:"左心室要把血液送到全身，所以肌肉壁最厚。"},
+   {q:"管壁最薄、是血液與組織細胞交換物質的血管是哪一種？", a:["微血管","動脈","靜脈","主動脈"], e:"微血管管壁只由一層細胞構成，方便物質交換。"},
+   {q:"血液中負責運送氧氣的是哪一種成分？", a:["紅血球","白血球","血小板","血漿中的激素"], e:"紅血球含有血紅素，能和氧結合。"},
+   {q:"受傷流血時，協助血液凝固的是哪一種成分？", a:["血小板","紅血球","白血球","血漿中的水"], e:"血小板能協助血液凝固，幫助止血。"}
+  ]}
+ ]},
+ {id:"i5", name:"協調島", topic:"神經系統．內分泌．植物的感應", lat:16, lon:240, stages:[
+  {title:"神經系統", qs:[
+   {q:"神經系統構造與功能的基本單位是什麼？", a:["神經元","神經","脊髓","大腦"], e:"神經元也稱為神經細胞，能接收和傳導訊息。"},
+   {q:"手碰到很燙的東西時立刻縮回，這種反射的中樞主要在哪裡？", a:["脊髓","大腦","小腦","延腦"], e:"縮手反射由脊髓處理，不必經過大腦思考，所以反應很快。"},
+   {q:"負責維持身體平衡、協調動作的是哪一個部位？", a:["小腦","大腦","延腦","脊髓"], e:"小腦受損的人，走路容易搖晃不穩。"},
+   {q:"控制呼吸、心跳等維持生命基本活動的是哪一個部位？", a:["延腦","小腦","大腦","脊髓"], e:"延腦是呼吸、心跳的調節中樞。"},
+   {q:"思考、記憶、產生感覺的中樞在哪裡？", a:["大腦","小腦","延腦","脊髓"], e:"大腦是意識、思考、記憶與感覺的中樞。"}
+  ]},
+  {title:"內分泌與植物的感應", qs:[
+   {q:"內分泌腺分泌的化學物質稱為什麼？", a:["激素","酵素","膽汁","抗體"], e:"激素也稱為荷爾蒙，量很少但影響很大。"},
+   {q:"激素主要透過什麼運送到全身？", a:["血液","神經","淋巴結","消化道"], e:"內分泌腺沒有導管，激素直接進入血液運送到全身。"},
+   {q:"胰島素的主要作用是什麼？", a:["降低血液中的葡萄糖濃度","升高血糖","促進消化脂質","加快心跳"], e:"胰島素讓葡萄糖進入細胞利用或儲存，使血糖下降。"},
+   {q:"甲狀腺素主要影響人體的哪一項功能？", a:["調節新陳代謝的速率","控制血液凝固","分解澱粉","產生抗體"], e:"甲狀腺素影響代謝速率，也與生長發育有關。"},
+   {q:"窗邊盆栽的莖向著光源彎曲生長，主要原因是什麼？", a:["背光側的生長素較多，背光側長得較快","向光側的生長素較多，向光側長得較快","植物有眼睛可以看到光","光會把莖推向窗邊"], e:"生長素分布不均，背光側細胞生長較快，所以莖彎向光源，稱為向光性。"}
+  ]}
+ ]},
+ {id:"i6", name:"恆定島", topic:"呼吸．排泄．體溫與血糖", lat:-20, lon:300, stages:[
+  {title:"呼吸與排泄", qs:[
+   {q:"人體肺部進行氣體交換的部位是哪裡？", a:["肺泡","氣管","支氣管","鼻腔"], e:"肺泡數量多、外面圍繞微血管，是氣體交換的場所。"},
+   {q:"吸氣時，橫膈會有什麼變化？", a:["收縮下降，使胸腔變大","放鬆上升，使胸腔變小","完全不動","收縮上升，使胸腔變小"], e:"橫膈收縮下降、肋骨上舉，胸腔變大，空氣就被吸進肺部。"},
+   {q:"人體形成尿液的器官是哪一個？", a:["腎臟","膀胱","肝臟","大腸"], e:"腎臟過濾血液形成尿液，膀胱只是暫時儲存尿液。"},
+   {q:"含氮廢物「尿素」主要在哪一個器官產生？", a:["肝臟","腎臟","膀胱","胰臟"], e:"肝臟把有毒的氨轉變成毒性較低的尿素，再由腎臟排出。"},
+   {q:"魚類主要用什麼器官進行氣體交換？", a:["鰓","肺","皮膚","氣管"], e:"鰓絲上有許多微血管，能吸收溶在水中的氧。"}
+  ]},
+  {title:"體溫與血糖的恆定", qs:[
+   {q:"生物維持體內環境穩定的狀態，稱為什麼？", a:["恆定性","感應","代謝","演化"], e:"例如體溫、血糖、體內水分的穩定，都是恆定性的表現。"},
+   {q:"天氣炎熱時，人體如何幫助散熱？", a:["皮膚血管擴張，流汗增加","皮膚血管收縮，停止流汗","肌肉不停發抖","呼吸停止"], e:"血管擴張讓更多熱由皮膚散出，汗水蒸發也會帶走熱量。"},
+   {q:"吃完飯後血糖升高，胰臟會分泌哪一種激素來調節？", a:["胰島素","升糖素","腎上腺素","生長激素"], e:"胰島素使血糖下降；血糖過低時，則由升糖素讓血糖上升。"},
+   {q:"不論外界溫度如何，體溫都能大致保持穩定的動物，例如鳥類和哺乳類，稱為什麼？", a:["恆溫動物","變溫動物","冷血動物","兩生動物"], e:"魚類、兩生類、爬蟲類的體溫會隨環境改變，稱為變溫動物。"},
+   {q:"植物主要靠哪一種構造控制氣孔開閉，調節水分散失？", a:["保衛細胞","根毛","木質部","花瓣"], e:"一對保衛細胞圍成氣孔，缺水時氣孔會關閉，以減少水分散失。"}
+  ]}
+ ]}
+];
+
+/* ============================================================ */
+const STORE_KEY = "learning-planet-bio7-v1";
+const $ = id => document.getElementById(id);
+let progress = loadProgress();          // { "i1-0": 3, ... } 每關最高星數
+
+function loadProgress(){
+  try{ const raw = localStorage.getItem(STORE_KEY); const o = raw ? JSON.parse(raw) : {}; return (o && typeof o==="object") ? o : {}; }
+  catch(e){ return {}; }
+}
+function saveProgress(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(progress)); }catch(e){} }
+const key = (iid, si) => iid + "-" + si;
+const starsOf = (iid, si) => progress[key(iid, si)] || 0;
+const islandStars = isl => isl.stages.reduce((s,_,i)=>s+starsOf(isl.id,i),0);
+const maxStars = ISLANDS.reduce((s,i)=>s+i.stages.length*3,0);
+function starFor(correct,total){ const r=correct/total; return r>=1?3:r>=0.8?2:r>=0.6?1:0; }
+function starsHTML(n){ let h=""; for(let i=0;i<3;i++) h+= i<n ? '<span class="on">★</span>' : "★"; return h; }
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+const isTeacher = () => location.hash === "#teacher";
+const isOpen = isl => isTeacher() || OPEN_ISLANDS.includes(isl.id);
+
+/* ---------- 畫面切換 ---------- */
+let current = {island:null, stage:0};
+function show(view){
+  ["viewHome","viewIsland","viewQuiz"].forEach(v=>$(v).hidden = (v!==view));
+  window.scrollTo({top:0});
+}
+function renderTally(){
+  $("totalStars").textContent = ISLANDS.reduce((s,i)=>s+islandStars(i),0);
+  $("maxStars").textContent = maxStars;
+}
+function renderList(){
+  $("teacherNote").hidden = !isTeacher();
+  $("islandList").innerHTML = ISLANDS.map(isl=>{
+    const got = islandStars(isl), max = isl.stages.length*3;
+    const open = isOpen(isl);
+    const status = !open ? "尚未開放" : got===0 ? "還沒開始" : got===max ? "全部完成" : "探索中";
+    return `<li><button class="island-btn" style="--c:var(--${isl.id})" data-id="${isl.id}" ${open?"":"disabled"}>
+      <span class="dot"></span><span class="name">${esc(isl.name)}</span>
+      <span class="meta">${open?`<span class="st">★ ${got}/${max}</span>`:`<span class="lock">敬請期待</span>`}${status}</span>
+      <span class="topic">${esc(isl.topic)}</span>
+      <span class="bar"><i style="width:${Math.round(got/max*100)}%"></i></span>
+    </button></li>`;
+  }).join("");
+}
+$("islandList").addEventListener("click",e=>{
+  const b=e.target.closest(".island-btn"); if(b) openIsland(b.dataset.id);
+});
+
+function openIsland(id){
+  const isl = ISLANDS.find(i=>i.id===id); if(!isl || !isOpen(isl)) return;
+  current.island = isl;
+  const v=$("viewIsland"); v.style.setProperty("--c",`var(--${isl.id})`);
+  $("islandHead").innerHTML = `<h2>${esc(isl.name)}</h2><p>${esc(isl.topic)}．目前 ★ ${islandStars(isl)} / ${isl.stages.length*3}</p>`;
+  $("stageList").innerHTML = isl.stages.map((st,i)=>{
+    const s = starsOf(isl.id,i);
+    const locked = i>0 && starsOf(isl.id,i-1)===0;
+    const note = locked ? "前一關拿到 1 顆星以上就會開啟" : s===3 ? "已經滿星！也可以再練習一次" : s>0 ? "再挑戰一次，可以拿更多星" : `共 ${st.qs.length} 題，答對越多星星越多`;
+    return `<div class="stage"><span class="no">第 ${i+1} 關</span><h3>${esc(st.title)}</h3>
+      <div class="stars" aria-label="${s} 顆星">${starsHTML(s)}</div><p>${note}</p>
+      <button class="go" data-stage="${i}" ${locked?"disabled":""}>${locked?"尚未開啟":s>0?"再挑戰":"出發"}</button></div>`;
+  }).join("");
+  show("viewIsland");
+}
+$("stageList").addEventListener("click",e=>{
+  const b=e.target.closest(".go"); if(b && !b.disabled) startQuiz(+b.dataset.stage);
+});
+$("backHome").addEventListener("click",()=>{ renderList(); show("viewHome"); });
+
+/* ---------- 闖關 ---------- */
+let quiz = null;
+function startQuiz(si){
+  const isl=current.island, st=isl.stages[si];
+  current.stage=si;
+  quiz = { qs: shuffle(st.qs).map(q=>({...q, opts: shuffle(q.a.map((t,i)=>({t, right:i===0})))})), i:0, correct:0, marks:[] };
+  $("viewQuiz").style.setProperty("--c",`var(--${isl.id})`);
+  $("quizWhere").textContent = `${isl.name}．第 ${si+1} 關．${st.title}`;
+  show("viewQuiz"); renderQuestion();
+}
+function renderPips(){
+  $("pips").innerHTML = quiz.qs.map((_,i)=>`<i class="${quiz.marks[i]===true?"ok":quiz.marks[i]===false?"no":i===quiz.i?"now":""}"></i>`).join("");
+}
+function renderQuestion(){
+  renderPips();
+  const q=quiz.qs[quiz.i], letters="ABCD";
+  $("quizCard").innerHTML = `<p class="qtext">${quiz.i+1}. ${esc(q.q)}</p>
+    <div class="opts">${q.opts.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${letters[i]}</span><span>${esc(o.t)}</span></button>`).join("")}</div>
+    <div id="fb"></div>`;
+  const first=$("quizCard").querySelector(".opt"); if(first) first.focus({preventScroll:true});
+}
+$("quizCard").addEventListener("click",e=>{
+  const b=e.target.closest(".opt");
+  if(b && !b.disabled){ answer(+b.dataset.i); return; }
+  const n=e.target.closest("[data-act]"); if(!n) return;
+  const act=n.dataset.act;
+  if(act==="next"){ quiz.i++; quiz.i<quiz.qs.length ? renderQuestion() : renderResult(); }
+  if(act==="retry") startQuiz(current.stage);
+  if(act==="nextStage") startQuiz(current.stage+1);
+  if(act==="island") openIsland(current.island.id);
+});
+function answer(idx){
+  const q=quiz.qs[quiz.i], ok=q.opts[idx].right;
+  quiz.marks[quiz.i]=ok; if(ok) quiz.correct++;
+  const btns=[...$("quizCard").querySelectorAll(".opt")];
+  btns.forEach((b,i)=>{ b.disabled=true; if(q.opts[i].right) b.classList.add("right"); else if(i===idx) b.classList.add("wrong"); });
+  const rightText=q.opts.find(o=>o.right).t;
+  $("fb").innerHTML = `<div class="feedback ${ok?"good":"bad"}"><b>${ok?"答對了！":"再想想看"}</b>
+    ${ok?"":`正確答案是「${esc(rightText)}」。`}${esc(q.e)}</div>
+    <div class="next"><button class="btn" data-act="next">${quiz.i+1<quiz.qs.length?"下一題 →":"看結果"}</button></div>`;
+  renderPips();
+  const nb=$("quizCard").querySelector("[data-act=next]"); if(nb) nb.focus({preventScroll:true});
+}
+function renderResult(){
+  const isl=current.island, si=current.stage, total=quiz.qs.length;
+  const s=starFor(quiz.correct,total), prev=starsOf(isl.id,si);
+  if(s>prev){ progress[key(isl.id,si)]=s; saveProgress(); }
+  renderTally(); renderPips();
+  const best=Math.max(s,prev);
+  const head = s===3?"全部答對，太厲害了！": s>0?"闖關成功！":"差一點點！";
+  const line = s>0 ? `答對 ${quiz.correct} / ${total} 題，得到 ${s} 顆星。${s<prev?`（這一關的最佳紀錄是 ${prev} 顆星）`:""}`
+                   : `答對 ${quiz.correct} / ${total} 題。答對 ${Math.ceil(total*0.6)} 題以上就能拿到星星，再挑戰一次吧！`;
+  const hasNext = si+1<isl.stages.length && best>0;
+  $("quizCard").innerHTML = `<div class="result"><div class="big" aria-label="${s} 顆星">${starsHTML(s)}</div>
+    <h2>${head}</h2><p>${line}</p>
+    <div class="row">${hasNext?`<button class="btn" data-act="nextStage">前往第 ${si+2} 關 →</button>`:""}
+    <button class="btn ${hasNext?"ghost":""}" data-act="retry">再挑戰一次</button>
+    <button class="btn ghost" data-act="island">回到島嶼</button></div></div>`;
+}
+$("quitQuiz").addEventListener("click",()=>openIsland(current.island.id));
+
+/* ---------- 進度碼 ---------- */
+function encodeCode(){
+  const s = ISLANDS.map(isl=>isl.stages.map((_,i)=>starsOf(isl.id,i)).join("")).join(".");
+  return "LP1-" + s;
+}
+function decodeCode(code){
+  const m = String(code).trim().toUpperCase().match(/^LP1-([0-3.]+)$/);
+  if(!m) return null;
+  const parts=m[1].split(".");
+  if(parts.length!==ISLANDS.length) return null;
+  const out={};
+  for(let k=0;k<ISLANDS.length;k++){
+    const isl=ISLANDS[k], p=parts[k];
+    if(p.length!==isl.stages.length) return null;
+    for(let i=0;i<p.length;i++){ const n=+p[i]; if(n>0) out[key(isl.id,i)]=n; }
+  }
+  return out;
+}
+function msg(text,ok){ const m=$("codeMsg"); m.textContent=text; m.className="msg "+(ok?"ok":"bad"); }
+$("makeCode").addEventListener("click",()=>{
+  const t=$("exportCode"); t.value=encodeCode(); t.hidden=false; $("copyRow").hidden=false; msg("",true);
+});
+$("copyCode").addEventListener("click",()=>{
+  const t=$("exportCode");
+  const fallback=()=>{ t.focus(); t.select(); msg("已選取進度碼，請按 Ctrl+C（手機長按）複製。",true); };
+  try{ navigator.clipboard.writeText(t.value).then(()=>msg("已複製進度碼。",true), fallback); }catch(e){ fallback(); }
+});
+$("doImport").addEventListener("click",()=>{
+  const data=decodeCode($("importCode").value);
+  if(!data){ msg("這組進度碼的格式不正確，請確認是以 LP1- 開頭且完整貼上。",false); return; }
+  // 合併：保留兩邊較高的星數
+  Object.keys(data).forEach(k=>{ progress[k]=Math.max(progress[k]||0,data[k]); });
+  saveProgress(); renderList(); renderTally(); $("importCode").value="";
+  msg("匯入完成，進度已更新。",true);
+});
+let resetArmed=false, resetTimer=null;
+$("resetBtn").addEventListener("click",()=>{
+  const b=$("resetBtn");
+  if(!resetArmed){ resetArmed=true; b.textContent="確定清除？再按一次"; msg("清除後無法復原，建議先產生進度碼保存。",false);
+    clearTimeout(resetTimer); resetTimer=setTimeout(()=>{resetArmed=false;b.textContent="清除本機進度";},5000); return; }
+  resetArmed=false; b.textContent="清除本機進度"; progress={}; saveProgress(); renderList(); renderTally(); msg("本機進度已清除。",true);
+});
+
+/* ---------- 旋轉星球 ---------- */
+(function planet(){
+  const box=$("planetBox"), cv=$("planet"), ctx=cv.getContext("2d");
+  const D=Math.PI/180, reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let rot=0, tilt=-0.25, W=0, dpr=1, drag=null, hits=[];
+  // 以固定亂數種子產生每座島的形狀
+  let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  const blobs=ISLANDS.map(()=>Array.from({length:9},(_,k)=>({dla:k?(rnd()-.5)*16:0, dlo:k?(rnd()-.5)*20:0, r:k?.045+rnd()*.04:.085})));
+  const deco=Array.from({length:14},()=>({lat:(rnd()-.5)*140, lon:rnd()*360, r:.015+rnd()*.025}));
+  const stars=Array.from({length:40},()=>({x:rnd(),y:rnd(),s:rnd()}));
+
+  function size(){ dpr=Math.min(2,window.devicePixelRatio||1); W=box.clientWidth; cv.width=W*dpr; cv.height=W*dpr; }
+  new ResizeObserver(size).observe(box); size();
+
+  function proj(lat,lon){
+    const p=lat*D, l=lon*D+rot;
+    const x=Math.cos(p)*Math.sin(l), y=Math.sin(p), z=Math.cos(p)*Math.cos(l);
+    const ct=Math.cos(tilt), st=Math.sin(tilt);
+    return {x, y:y*ct - z*st, z:y*st + z*ct};
+  }
+  const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function draw(){
+    if(!W){ return; }
+    const c={ocean:tok("--ocean"),deep:tok("--ocean-deep"),land:tok("--land"),edge:tok("--land-edge"),
+      surf:tok("--surface"),ink:tok("--ink"),gold:tok("--gold"),muted:tok("--muted")};
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,W);
+    const cx=W/2, cy=W/2, R=W*0.4;
+    // 背景小星點
+    ctx.fillStyle=c.muted;
+    stars.forEach(s=>{ const x=s.x*W, y=s.y*W; if(Math.hypot(x-cx,y-cy)>R+8){ ctx.globalAlpha=.25+.35*s.s; ctx.beginPath(); ctx.arc(x,y,.8+s.s*1.2,0,7); ctx.fill(); }});
+    ctx.globalAlpha=1;
+    // 大氣光暈
+    const glow=ctx.createRadialGradient(cx,cy,R*.95,cx,cy,R*1.12);
+    glow.addColorStop(0,c.ocean); glow.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.globalAlpha=.35; ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(cx,cy,R*1.12,0,7); ctx.fill(); ctx.globalAlpha=1;
+    // 海洋
+    const og=ctx.createRadialGradient(cx-R*.35,cy-R*.4,R*.1,cx,cy,R);
+    og.addColorStop(0,c.ocean); og.addColorStop(1,c.deep);
+    ctx.fillStyle=og; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.clip();
+    // 小礁島
+    ctx.fillStyle=c.land; ctx.globalAlpha=.55;
+    deco.forEach(d=>{ const p=proj(d.lat,d.lon); if(p.z>0){ ctx.beginPath(); ctx.arc(cx+p.x*R,cy-p.y*R,d.r*R*(.4+.6*p.z),0,7); ctx.fill(); }});
+    ctx.globalAlpha=1;
+    // 群島（先畫邊再填色）
+    const shapes=[];
+    ISLANDS.forEach((isl,k)=>blobs[k].forEach(b=>{ const p=proj(isl.lat+b.dla,isl.lon+b.dlo); if(p.z>0) shapes.push({x:cx+p.x*R,y:cy-p.y*R,r:b.r*R*(.35+.65*p.z),z:p.z,locked:!isOpen(isl)}); }));
+    ctx.fillStyle=c.edge; shapes.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r+2.5,0,7);ctx.fill();});
+    shapes.forEach(s=>{ctx.fillStyle=s.locked?c.muted:c.land;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,7);ctx.fill();});
+    // 光影
+    const sh=ctx.createRadialGradient(cx-R*.4,cy-R*.45,R*.05,cx,cy,R*1.05);
+    sh.addColorStop(0,"rgba(255,255,255,.22)"); sh.addColorStop(.55,"rgba(255,255,255,0)"); sh.addColorStop(1,"rgba(0,0,0,.28)");
+    ctx.fillStyle=sh; ctx.fillRect(cx-R,cy-R,R*2,R*2);
+    ctx.restore();
+    // 標籤
+    hits=[];
+    const fs=Math.max(12,Math.round(W*0.03));
+    ctx.font=`${fs}px ${tok("--font-display")}`; ctx.textBaseline="middle";
+    ISLANDS.map((isl,k)=>({isl,p:proj(isl.lat,isl.lon)})).filter(o=>o.p.z>0.2).sort((a,b)=>a.p.z-b.p.z).forEach(({isl,p})=>{
+      const x=cx+p.x*R, y=cy-p.y*R, col=tok("--"+isl.id);
+      const open=isOpen(isl), got=islandStars(isl), text=isl.name, sub=open?`★${got}`:"未開放";
+      const tw=ctx.measureText(text).width, sw=ctx.measureText(sub).width;
+      const w=tw+sw+fs*1.6, h=fs*1.9, lx=x-w/2, ly=y-R*0.14-h;
+      ctx.globalAlpha=Math.min(1,(p.z-0.2)*3);
+      ctx.strokeStyle=c.surf; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,ly+h); ctx.stroke();
+      ctx.fillStyle=open?col:c.muted; ctx.beginPath(); ctx.arc(x,y,fs*.38,0,7); ctx.fill();
+      ctx.strokeStyle=c.surf; ctx.stroke();
+      ctx.fillStyle=c.surf; roundRect(lx,ly,w,h,h/2); ctx.fill();
+      ctx.fillStyle=c.ink; ctx.fillText(text,lx+fs*.75,ly+h/2+1);
+      ctx.fillStyle=open?c.gold:c.muted; ctx.fillText(sub,lx+fs*.85+tw+fs*.25,ly+h/2+1);
+      ctx.globalAlpha=1;
+      if(open) hits.push({id:isl.id,x0:lx,y0:ly,x1:lx+w,y1:y+fs*.5,z:p.z});
+    });
+  }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  function loop(){
+    if(!$("viewHome").hidden){
+      if(!drag && !reduce) rot+=0.0025;
+      draw();
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  box.addEventListener("pointerdown",e=>{ drag={x:e.clientX,y:e.clientY,r:rot,t:tilt,moved:0}; box.setPointerCapture(e.pointerId); box.classList.add("dragging"); });
+  box.addEventListener("pointermove",e=>{
+    if(!drag) return;
+    const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+    drag.moved=Math.max(drag.moved,Math.hypot(dx,dy));
+    rot=drag.r+dx/W*3.2; tilt=Math.max(-0.9,Math.min(0.9,drag.t+dy/W*2.4));
+    if(reduce) draw();
+  });
+  box.addEventListener("pointerup",e=>{
+    box.classList.remove("dragging");
+    if(drag && drag.moved<6){
+      const r=box.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+      const hit=hits.slice().reverse().find(h=>x>=h.x0&&x<=h.x1&&y>=h.y0&&y<=h.y1);
+      if(hit) openIsland(hit.id);
+    }
+    drag=null;
+  });
+  box.addEventListener("pointercancel",()=>{ drag=null; box.classList.remove("dragging"); });
+  if(reduce) setTimeout(draw,300);
+  window.addEventListener("load",draw);
+})();
+
+window.addEventListener("hashchange",()=>{ renderList(); show("viewHome"); });
+renderList(); renderTally();
+</script>
+
+</body>
+</html>
